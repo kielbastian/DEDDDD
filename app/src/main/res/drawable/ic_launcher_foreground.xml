@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Prosty symbol telewizora -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,38 L78,38 A4,4 0 0 1 82,42 L82,68 A4,4 0 0 1 78,72 L30,72 A4,4 0 0 1 26,68 L26,42 A4,4 0 0 1 30,38 Z" />
+    <path
+        android:fillColor="#1A237E"
+        android:pathData="M32,44 L76,44 L76,66 L32,66 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M42,74 L66,74 L66,78 L42,78 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,50 L60,55 L48,60 Z" />
+</vector>
