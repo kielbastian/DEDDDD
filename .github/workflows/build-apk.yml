@@ -1,0 +1,50 @@
+name: Build APK
+
+on:
+  push:
+    branches:
+      - claude/android-tv-program-search-dauefn
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pobierz kod
+        uses: actions/checkout@v4
+
+      - name: Zainstaluj JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Skonfiguruj Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Zbuduj APK (debug)
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Zapisz APK jako artefakt
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProgramTV-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Opublikuj APK w wydaniu (release)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: "Program TV – najnowszy APK"
+          body: >
+            Automatycznie zbudowany plik APK aplikacji Program TV.
+            Pobierz app-debug.apk na telefon i zainstaluj.
+          prerelease: true
+          files: app/build/outputs/apk/debug/app-debug.apk
