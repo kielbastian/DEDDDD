@@ -37,5 +37,6 @@ data class ProgrammeEntity(
 /** Pozycja programu razem z nazwą kanału – wynik wyszukiwania / widok "teraz". */
 data class ProgrammeWithChannel(
     @Embedded val programme: ProgrammeEntity,
-    val channelName: String
+    val channelName: String,
+    val channelIconUrl: String?
 )

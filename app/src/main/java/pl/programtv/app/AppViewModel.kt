@@ -117,6 +117,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { repo.dao.setChannelSelected(channelId, selected) }
     }
 
+    /** Zaznacza/odznacza wiele kanałów naraz (np. „Zaznacz wszystkie”). */
+    fun setChannelsSelected(channelIds: List<String>, selected: Boolean) {
+        viewModelScope.launch {
+            // SQLite ogranicza liczbę parametrów zapytania, stąd porcje.
+            channelIds.chunked(800).forEach { repo.dao.setChannelsSelected(it, selected) }
+        }
+    }
+
     fun setEpgUrl(url: String) {
         repo.epgUrl = url
     }

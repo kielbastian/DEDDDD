@@ -22,10 +22,13 @@ interface EpgDao {
     @Query("UPDATE channels SET selected = :selected WHERE id = :channelId")
     suspend fun setChannelSelected(channelId: String, selected: Boolean)
 
+    @Query("UPDATE channels SET selected = :selected WHERE id IN (:channelIds)")
+    suspend fun setChannelsSelected(channelIds: List<String>, selected: Boolean)
+
     /** Co leci teraz na wybranych kanałach. */
     @Query(
         """
-        SELECT p.*, c.displayName AS channelName
+        SELECT p.*, c.displayName AS channelName, c.iconUrl AS channelIconUrl
         FROM programmes p
         JOIN channels c ON c.id = p.channelId
         WHERE c.selected = 1 AND p.startMillis <= :now AND p.stopMillis > :now
@@ -37,7 +40,7 @@ interface EpgDao {
     /** Program jednego kanału od podanej chwili. */
     @Query(
         """
-        SELECT p.*, c.displayName AS channelName
+        SELECT p.*, c.displayName AS channelName, c.iconUrl AS channelIconUrl
         FROM programmes p
         JOIN channels c ON c.id = p.channelId
         WHERE p.channelId = :channelId AND p.stopMillis > :from
@@ -53,7 +56,7 @@ interface EpgDao {
      */
     @Query(
         """
-        SELECT p.*, c.displayName AS channelName
+        SELECT p.*, c.displayName AS channelName, c.iconUrl AS channelIconUrl
         FROM programmes p
         JOIN channels c ON c.id = p.channelId
         WHERE p.title LIKE '%' || :query || '%' AND p.stopMillis > :now
