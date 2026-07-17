@@ -20,10 +20,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -65,30 +67,75 @@ import pl.programtv.app.data.ProgrammeWithChannel
 fun NowScreen(viewModel: AppViewModel, padding: PaddingValues) {
     val nowPlaying by viewModel.nowPlaying.collectAsState()
     val selectedChannels by viewModel.selectedChannels.collectAsState()
+    var query by remember { mutableStateOf("") }
 
-    when {
-        selectedChannels.isEmpty() -> EmptyInfo(
+    if (selectedChannels.isEmpty()) {
+        EmptyInfo(
             padding,
             Icons.Filled.Tune,
             "Nie wybrano jeszcze żadnych stacji.\n" +
                 "Przejdź do zakładki „Kanały” i zaznacz interesujące Cię stacje."
         )
-        nowPlaying.isEmpty() -> EmptyInfo(
+        return
+    }
+    if (nowPlaying.isEmpty()) {
+        EmptyInfo(
             padding,
             Icons.Filled.LiveTv,
             "Brak danych o bieżącym programie.\n" +
                 "Odśwież program TV przyciskiem w górnym pasku."
         )
-        else -> LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            item {
-                SectionHeader("Teraz na antenie", "${nowPlaying.size} kanałów")
+        return
+    }
+
+    val q = query.trim()
+    val filtered = if (q.isEmpty()) nowPlaying else nowPlaying.filter {
+        it.channelName.contains(q, ignoreCase = true) ||
+            it.programme.title.contains(q, ignoreCase = true)
+    }
+    // Podpowiedzi: nazwy kanałów i tytuły programów pasujące od pierwszych liter.
+    val suggestions = if (q.isEmpty()) emptyList() else buildSuggestions(
+        q,
+        channelNames = nowPlaying.map { it.channelName },
+        titles = nowPlaying.map { it.programme.title }
+    )
+
+    Column(Modifier.fillMaxSize().padding(padding)) {
+        SearchBar(query, { query = it }, "Szukaj kanału lub programu…")
+
+        if (suggestions.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(suggestions, key = { it }) { s ->
+                    QueryChip(s) { query = s }
+                }
             }
-            items(nowPlaying, key = { it.programme.id }) { item ->
-                NowCard(item)
+            Spacer(Modifier.height(6.dp))
+        }
+
+        if (filtered.isEmpty()) {
+            EmptyInfo(
+                PaddingValues(0.dp),
+                Icons.Filled.SearchOff,
+                "Nie znaleziono „$q” wśród programów nadawanych teraz."
+            )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    SectionHeader(
+                        if (q.isEmpty()) "Teraz na antenie" else "Wyniki",
+                        "${filtered.size} kanałów"
+                    )
+                }
+                items(filtered, key = { it.programme.id }) { item ->
+                    NowCard(item)
+                }
             }
         }
     }
@@ -165,75 +212,129 @@ private fun LivePill() {
     }
 }
 
-/** Ekran "Program" – ramówka jednego z wybranych kanałów. */
+/** Ekran "Program" – ramówka kanału; można wyszukać kanał po nazwie. */
 @Composable
 fun ScheduleScreen(viewModel: AppViewModel, padding: PaddingValues) {
+    val allChannels by viewModel.channels.collectAsState()
     val selectedChannels by viewModel.selectedChannels.collectAsState()
     val schedule by viewModel.schedule.collectAsState()
     val currentChannelId by viewModel.scheduleChannelId.collectAsState()
+    var query by remember { mutableStateOf("") }
 
-    LaunchedEffect(selectedChannels) {
-        if (selectedChannels.none { it.id == currentChannelId }) {
-            viewModel.scheduleChannelId.value = selectedChannels.firstOrNull()?.id
+    // Ustaw domyślny kanał: najpierw z wybranych, w razie potrzeby dowolny.
+    LaunchedEffect(selectedChannels, allChannels) {
+        if (allChannels.none { it.id == currentChannelId }) {
+            viewModel.scheduleChannelId.value =
+                (selectedChannels.firstOrNull() ?: allChannels.firstOrNull())?.id
         }
     }
 
-    if (selectedChannels.isEmpty()) {
+    if (allChannels.isEmpty()) {
         EmptyInfo(
             padding,
             Icons.Filled.Tune,
-            "Nie wybrano jeszcze żadnych stacji.\n" +
-                "Przejdź do zakładki „Kanały” i zaznacz interesujące Cię stacje."
+            "Lista kanałów jest pusta.\nOdśwież program TV przyciskiem w górnym pasku."
         )
         return
     }
 
-    Column(Modifier.fillMaxSize().padding(padding)) {
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(selectedChannels, key = { it.id }) { channel ->
-                FilterChip(
-                    selected = channel.id == currentChannelId,
-                    onClick = { viewModel.scheduleChannelId.value = channel.id },
-                    label = { Text(channel.displayName) },
-                    leadingIcon = {
-                        ChannelLogo(channel.displayName, channel.iconUrl, size = 22.dp)
-                    },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                )
-            }
-        }
-
-        if (schedule.isEmpty()) {
-            EmptyInfo(
-                PaddingValues(0.dp),
-                Icons.Filled.LiveTv,
-                "Brak ramówki dla tego kanału.\nOdśwież program TV przyciskiem w górnym pasku."
+    val q = query.trim()
+    // Podpowiedzi kanałów pasujących od pierwszych liter (najpierw dopasowania od początku).
+    val matches = if (q.isEmpty()) emptyList()
+    else allChannels
+        .filter { it.displayName.contains(q, ignoreCase = true) }
+        .sortedWith(
+            compareBy(
+                { if (it.displayName.startsWith(q, ignoreCase = true)) 0 else 1 },
+                { it.displayName.lowercase() }
             )
-        } else {
-            val grouped = schedule.groupBy { localDateOf(it.programme.startMillis) }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                grouped.forEach { (day, items) ->
-                    item(key = "day-$day") {
-                        Text(
-                            formatDayHeader(day),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(vertical = 8.dp)
-                        )
+        )
+        .take(40)
+
+    // Chipy: wybrane kanały + aktualnie oglądany (nawet jeśli nie jest zaznaczony).
+    val chipChannels = remember(selectedChannels, allChannels, currentChannelId) {
+        val current = allChannels.firstOrNull { it.id == currentChannelId }
+        (selectedChannels + listOfNotNull(current)).distinctBy { it.id }
+    }
+
+    Column(Modifier.fillMaxSize().padding(padding)) {
+        SearchBar(query, { query = it }, "Szukaj kanału po nazwie…")
+
+        if (q.isNotEmpty()) {
+            // Tryb wyszukiwania: pokazujemy listę podpowiadanych kanałów.
+            if (matches.isEmpty()) {
+                EmptyInfo(
+                    PaddingValues(0.dp),
+                    Icons.Filled.SearchOff,
+                    "Nie znaleziono kanału „$q”."
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    item { SectionHeader("Podpowiedzi", "${matches.size} kanałów") }
+                    items(matches, key = { it.id }) { channel ->
+                        ChannelSuggestionRow(
+                            name = channel.displayName,
+                            iconUrl = channel.iconUrl,
+                            selected = channel.id == currentChannelId
+                        ) {
+                            viewModel.scheduleChannelId.value = channel.id
+                            query = ""
+                        }
                     }
-                    items(items, key = { it.programme.id }) { item ->
-                        ScheduleRow(item)
+                }
+            }
+        } else {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(chipChannels, key = { it.id }) { channel ->
+                    FilterChip(
+                        selected = channel.id == currentChannelId,
+                        onClick = { viewModel.scheduleChannelId.value = channel.id },
+                        label = { Text(channel.displayName) },
+                        leadingIcon = {
+                            ChannelLogo(channel.displayName, channel.iconUrl, size = 22.dp)
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    )
+                }
+            }
+
+            if (schedule.isEmpty()) {
+                EmptyInfo(
+                    PaddingValues(0.dp),
+                    Icons.Filled.LiveTv,
+                    "Brak ramówki dla tego kanału.\n" +
+                        "Odśwież program TV przyciskiem w górnym pasku."
+                )
+            } else {
+                val grouped = schedule.groupBy { localDateOf(it.programme.startMillis) }
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    grouped.forEach { (day, items) ->
+                        item(key = "day-$day") {
+                            Text(
+                                formatDayHeader(day),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                        items(items, key = { it.programme.id }) { item ->
+                            ScheduleRow(item)
+                        }
                     }
                 }
             }
@@ -520,6 +621,80 @@ fun ChannelsScreen(viewModel: AppViewModel, padding: PaddingValues) {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Buduje listę podpowiedzi (nazwy kanałów + tytuły) pasujących od pierwszych liter. */
+private fun buildSuggestions(
+    query: String,
+    channelNames: List<String>,
+    titles: List<String>
+): List<String> {
+    val q = query.trim()
+    if (q.isEmpty()) return emptyList()
+    fun rank(s: String) = if (s.startsWith(q, ignoreCase = true)) 0 else 1
+    val channels = channelNames.distinct().filter { it.contains(q, ignoreCase = true) }
+    val programmes = titles.distinct().filter { it.contains(q, ignoreCase = true) }
+    return (channels + programmes)
+        .distinct()
+        .sortedWith(compareBy({ rank(it) }, { it.lowercase() }))
+        .take(8)
+}
+
+/** Klikalny chip podpowiedzi – uzupełnia pole wyszukiwania. */
+@Composable
+private fun QueryChip(text: String, onClick: () -> Unit) {
+    AssistChip(
+        onClick = onClick,
+        label = { Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    )
+}
+
+/** Wiersz podpowiedzi kanału na ekranie „Program”. */
+@Composable
+private fun ChannelSuggestionRow(
+    name: String,
+    iconUrl: String?,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val bg = if (selected) MaterialTheme.colorScheme.primaryContainer
+    else MaterialTheme.colorScheme.surface
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = bg),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ChannelLogo(name, iconUrl, size = 38.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                )
+                Text(
+                    "Kanał",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (selected) {
+                Icon(
+                    Icons.Filled.Check,
+                    contentDescription = "Wybrany",
+                    tint = MaterialTheme.colorScheme.primary
+                )
             }
         }
     }
