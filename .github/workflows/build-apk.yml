@@ -32,19 +32,24 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      - name: Zapisz APK jako artefakt
+      - name: Zapisz APK jako artefakty
         uses: actions/upload-artifact@v4
         with:
-          name: ProgramTV-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: apki-debug
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            cncapp/build/outputs/apk/debug/cncapp-debug.apk
 
       - name: Opublikuj APK w wydaniu (release)
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-latest
-          name: "Program TV – najnowszy APK"
+          name: "Najnowsze APK"
           body: >
-            Automatycznie zbudowany plik APK aplikacji Program TV.
-            Pobierz app-debug.apk na telefon i zainstaluj.
+            Automatycznie zbudowane pliki APK.
+            app-debug.apk to Program TV, cncapp-debug.apk to Kalkulator CNC.
+            Pobierz odpowiedni plik na telefon i zainstaluj.
           prerelease: true
-          files: app/build/outputs/apk/debug/app-debug.apk
+          files: |
+            app/build/outputs/apk/debug/app-debug.apk
+            cncapp/build/outputs/apk/debug/cncapp-debug.apk

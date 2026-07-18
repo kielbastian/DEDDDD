@@ -16,3 +16,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ProgramTV"
 include(":app")
+include(":cncapp")
