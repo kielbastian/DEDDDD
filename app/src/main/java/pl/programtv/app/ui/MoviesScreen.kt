@@ -1,5 +1,6 @@
 package pl.programtv.app.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,6 +28,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +44,7 @@ import pl.programtv.app.data.ProgrammeWithChannel
 @Composable
 fun MoviesScreen(viewModel: AppViewModel, padding: PaddingValues) {
     val state by viewModel.moviesState.collectAsState()
+    var selectedProgramme by remember { mutableStateOf<ProgrammeWithChannel?>(null) }
 
     LaunchedEffect(Unit) { viewModel.ensureMoviesLoaded() }
 
@@ -83,22 +88,31 @@ fun MoviesScreen(viewModel: AppViewModel, padding: PaddingValues) {
                     SectionHeader("Filmy pełnometrażowe", "${state.movies.size} pozycji")
                 }
                 items(state.movies, key = { it.programme.id }) { item ->
-                    MovieCard(item)
+                    MovieCard(item) { selectedProgramme = item }
                 }
             }
         }
     }
+
+    selectedProgramme?.let { item ->
+        ProgrammeDetailDialog(item) { selectedProgramme = null }
+    }
 }
 
 @Composable
-private fun MovieCard(item: ProgrammeWithChannel) {
+private fun MovieCard(item: ProgrammeWithChannel, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier
+                .clickable(onClick = onClick)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             ChannelLogo(item.channelName, item.channelIconUrl, size = 48.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {

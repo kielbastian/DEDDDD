@@ -69,6 +69,7 @@ fun NowScreen(viewModel: AppViewModel, padding: PaddingValues) {
     val nowPlaying by viewModel.nowPlaying.collectAsState()
     val selectedChannels by viewModel.selectedChannels.collectAsState()
     var query by remember { mutableStateOf("") }
+    var selectedProgramme by remember { mutableStateOf<ProgrammeWithChannel?>(null) }
 
     if (selectedChannels.isEmpty()) {
         EmptyInfo(
@@ -135,22 +136,26 @@ fun NowScreen(viewModel: AppViewModel, padding: PaddingValues) {
                     )
                 }
                 items(filtered, key = { it.programme.id }) { item ->
-                    NowCard(item)
+                    NowCard(item) { selectedProgramme = item }
                 }
             }
         }
     }
+
+    selectedProgramme?.let { item ->
+        ProgrammeDetailDialog(item) { selectedProgramme = null }
+    }
 }
 
 @Composable
-private fun NowCard(item: ProgrammeWithChannel) {
+private fun NowCard(item: ProgrammeWithChannel, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Column(Modifier.padding(14.dp)) {
+        Column(Modifier.clickable(onClick = onClick).padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ChannelLogo(item.channelName, item.channelIconUrl)
                 Spacer(Modifier.width(12.dp))
