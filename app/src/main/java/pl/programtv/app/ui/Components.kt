@@ -2,18 +2,26 @@ package pl.programtv.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import kotlin.math.abs
+import pl.programtv.app.data.ProgrammeWithChannel
 
 /** Wspólny pasek wyszukiwania z ikoną lupy i przyciskiem czyszczenia. */
 @Composable
@@ -110,4 +119,63 @@ private fun InitialsAvatar(name: String, size: Dp, shape: RoundedCornerShape) {
             style = MaterialTheme.typography.labelLarge
         )
     }
+}
+
+/** Okno ze szczegółami filmu/programu – pokazywane po dotknięciu pozycji. */
+@Composable
+fun ProgrammeDetailDialog(item: ProgrammeWithChannel, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ChannelLogo(item.channelName, item.channelIconUrl, size = 36.dp)
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(
+                        item.programme.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        item.channelName,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        text = {
+            Column {
+                Text(
+                    "${formatShortDateTime(item.programme.startMillis)} – " +
+                        formatTime(item.programme.stopMillis),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                item.programme.category?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(6.dp)
+                    ) {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    item.programme.description?.takeIf { it.isNotBlank() }
+                        ?: "Brak opisu dla tej pozycji.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Zamknij") }
+        }
+    )
 }

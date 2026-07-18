@@ -221,6 +221,7 @@ fun ScheduleScreen(viewModel: AppViewModel, padding: PaddingValues) {
     val schedule by viewModel.schedule.collectAsState()
     val currentChannelId by viewModel.scheduleChannelId.collectAsState()
     var query by remember { mutableStateOf("") }
+    var selectedProgramme by remember { mutableStateOf<ProgrammeWithChannel?>(null) }
 
     // Ustaw domyślny kanał: najpierw z wybranych, w razie potrzeby dowolny.
     LaunchedEffect(selectedChannels, allChannels) {
@@ -334,17 +335,21 @@ fun ScheduleScreen(viewModel: AppViewModel, padding: PaddingValues) {
                             )
                         }
                         items(items, key = { it.programme.id }) { item ->
-                            ScheduleRow(item)
+                            ScheduleRow(item) { selectedProgramme = item }
                         }
                     }
                 }
             }
         }
     }
+
+    selectedProgramme?.let { item ->
+        ProgrammeDetailDialog(item) { selectedProgramme = null }
+    }
 }
 
 @Composable
-private fun ScheduleRow(item: ProgrammeWithChannel) {
+private fun ScheduleRow(item: ProgrammeWithChannel, onClick: () -> Unit) {
     val now = System.currentTimeMillis()
     val isNow = item.programme.startMillis <= now && now < item.programme.stopMillis
     val bg = if (isNow) MaterialTheme.colorScheme.primaryContainer
@@ -357,7 +362,10 @@ private fun ScheduleRow(item: ProgrammeWithChannel) {
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -391,6 +399,7 @@ private fun ScheduleRow(item: ProgrammeWithChannel) {
 @Composable
 fun SearchScreen(viewModel: AppViewModel, padding: PaddingValues) {
     val state by viewModel.searchState.collectAsState()
+    var selectedProgramme by remember { mutableStateOf<ProgrammeWithChannel?>(null) }
 
     Column(Modifier.fillMaxSize().padding(padding)) {
         OutlinedTextField(
@@ -460,10 +469,14 @@ fun SearchScreen(viewModel: AppViewModel, padding: PaddingValues) {
                     }
                 }
                 items(state.results, key = { it.programme.id }) { item ->
-                    SearchResultCard(item)
+                    SearchResultCard(item) { selectedProgramme = item }
                 }
             }
         }
+    }
+
+    selectedProgramme?.let { item ->
+        ProgrammeDetailDialog(item) { selectedProgramme = null }
     }
 }
 
@@ -489,14 +502,19 @@ private fun SuggestionRow(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SearchResultCard(item: ProgrammeWithChannel) {
+private fun SearchResultCard(item: ProgrammeWithChannel, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier
+                .clickable(onClick = onClick)
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             ChannelLogo(item.channelName, item.channelIconUrl)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
