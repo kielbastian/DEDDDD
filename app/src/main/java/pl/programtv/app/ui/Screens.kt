@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -411,13 +412,30 @@ fun SearchScreen(viewModel: AppViewModel, padding: PaddingValues) {
                 }
             }
         )
-        Text(
-            "Wyszukiwanie obejmuje wszystkie kanały z pobranego programu TV.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        Spacer(Modifier.height(4.dp))
+
+        // Podpowiedzi tytułów – aktualizowane od pierwszych wpisanych liter.
+        if (state.suggestions.isNotEmpty()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp)
+                    .heightIn(max = 260.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                items(state.suggestions, key = { it }) { suggestion ->
+                    SuggestionRow(suggestion) { viewModel.applySuggestion(suggestion) }
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+        } else {
+            Text(
+                "Wyszukiwanie obejmuje wszystkie kanały z pobranego programu TV.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            Spacer(Modifier.height(4.dp))
+        }
 
         when {
             state.searching -> Row(
@@ -446,6 +464,27 @@ fun SearchScreen(viewModel: AppViewModel, padding: PaddingValues) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SuggestionRow(text: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            Icons.Filled.Search,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -701,7 +740,7 @@ private fun ChannelSuggestionRow(
 }
 
 @Composable
-private fun SectionHeader(title: String, trailing: String) {
+fun SectionHeader(title: String, trailing: String) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically

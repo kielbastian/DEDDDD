@@ -66,6 +66,35 @@ interface EpgDao {
     )
     suspend fun searchByTitle(query: String, now: Long): List<ProgrammeWithChannel>
 
+    /** Podpowiedzi tytułów do wyszukiwarki (pozycje jeszcze nadawane). */
+    @Query(
+        """
+        SELECT DISTINCT p.title
+        FROM programmes p
+        WHERE p.title LIKE '%' || :query || '%' AND p.stopMillis > :now
+        ORDER BY p.title COLLATE NOCASE
+        LIMIT 30
+        """
+    )
+    suspend fun suggestTitles(query: String, now: Long): List<String>
+
+    /**
+     * Kandydaci na filmy pełnometrażowe: pozycje o odpowiednio długim czasie
+     * trwania, które jeszcze się nie zaczęły lub trwają. Gatunek dobierany
+     * jest później na podstawie kategorii/opisu.
+     */
+    @Query(
+        """
+        SELECT p.*, c.displayName AS channelName, c.iconUrl AS channelIconUrl
+        FROM programmes p
+        JOIN channels c ON c.id = p.channelId
+        WHERE p.stopMillis > :now AND (p.stopMillis - p.startMillis) >= :minDurationMillis
+        ORDER BY p.startMillis
+        LIMIT 1200
+        """
+    )
+    suspend fun candidateMovies(now: Long, minDurationMillis: Long): List<ProgrammeWithChannel>
+
     @Query("SELECT COUNT(*) FROM programmes")
     suspend fun programmeCount(): Int
 

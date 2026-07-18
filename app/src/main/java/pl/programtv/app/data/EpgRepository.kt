@@ -34,6 +34,13 @@ class EpgRepository(context: Context) {
     val lastUpdateMillis: Long
         get() = prefs.getLong(KEY_LAST_UPDATE, 0L)
 
+    /** Czy pomijać stacje radiowe i kanały niepolskojęzyczne. Domyślnie tak. */
+    var polishOnly: Boolean
+        get() = prefs.getBoolean(KEY_POLISH_ONLY, true)
+        set(value) {
+            prefs.edit().putBoolean(KEY_POLISH_ONLY, value).apply()
+        }
+
     suspend fun hasData(): Boolean = dao.programmeCount() > 0
 
     /** Pobiera i zapisuje aktualny program TV. Rzuca IOException przy błędzie sieci. */
@@ -53,9 +60,51 @@ class EpgRepository(context: Context) {
             if (result.channels.isEmpty()) {
                 throw IOException("Plik EPG nie zawiera żadnych kanałów")
             }
-            dao.replaceAll(result.channels, result.programmes)
+
+            var channels = result.channels
+            var programmes = result.programmes
+            if (polishOnly) {
+                channels = channels.filter { ch ->
+                    !isRadioChannel(ch.displayName) &&
+                        !isKnownForeignChannel(ch.displayName) &&
+                        isPolishOrUnknown(result.languageByChannel[ch.id])
+                }
+                val keptIds = channels.mapTo(HashSet()) { it.id }
+                programmes = programmes.filter { it.channelId in keptIds }
+                // Zabezpieczenie: gdyby filtr usunął wszystko, zachowaj oryginał.
+                if (channels.isEmpty()) {
+                    channels = result.channels
+                    programmes = result.programmes
+                }
+            }
+
+            dao.replaceAll(channels, programmes)
             prefs.edit().putLong(KEY_LAST_UPDATE, System.currentTimeMillis()).apply()
         }
+    }
+
+    /** Heurystyka: czy nazwa wskazuje na stację radiową. */
+    private fun isRadioChannel(name: String): Boolean {
+        val n = name.lowercase()
+        if (Regex("\\bradio\\b").containsMatchIn(n)) return true
+        if (Regex("\\bfm\\b").containsMatchIn(n)) return true
+        return RADIO_BRANDS.any { n.contains(it) }
+    }
+
+    /** Kanał uznajemy za polski, gdy język jest „pl” albo nieznany (brak oznaczenia). */
+    private fun isPolishOrUnknown(language: String?): Boolean {
+        if (language.isNullOrBlank()) return true
+        val lang = language.lowercase()
+        return lang == "pl" || lang.startsWith("pol")
+    }
+
+    /**
+     * Rozpoznaje po nazwie dobrze znane zagraniczne stacje – wiele darmowych
+     * źródeł XMLTV nie oznacza języka w ogóle, więc sam atrybut „lang” nie wystarczy.
+     */
+    private fun isKnownForeignChannel(name: String): Boolean {
+        val n = name.lowercase()
+        return FOREIGN_BRANDS.any { n.contains(it) }
     }
 
     /** Rozpoznaje po nagłówku, czy strumień jest spakowany gzipem. */
@@ -74,5 +123,24 @@ class EpgRepository(context: Context) {
 
         private const val KEY_URL = "epg_url"
         private const val KEY_LAST_UPDATE = "last_update"
+        private const val KEY_POLISH_ONLY = "polish_only"
+
+        // Znane marki radiowe (nazwa kanału zawiera którąś z fraz).
+        private val RADIO_BRANDS = listOf(
+            "rmf", "eska rock", "rock radio", "antyradio", "chillizet",
+            "muzo", "tok fm", "vox fm", "radio zet", "radiozet",
+            "meloradio", "polskie radio"
+        )
+
+        // Dobrze znane zagraniczne stacje, które czasem trafiają do zbiorczych źródeł EPG.
+        private val FOREIGN_BRANDS = listOf(
+            "cnn", "bbc", "al jazeera", "sky news", "euronews",
+            "russia today", "france 24", "deutsche welle", " dw ",
+            "rai uno", "rai due", "rai tre", "das erste", "zdf",
+            "prosieben", "sat.1", "rtl2", "rtl deutschland", "orf ",
+            "nova sport", "markiza", "duna tv", "m1 ", "prima cool",
+            "1+1", "inter tv", "ntv ", "rossiya", "channel one russia",
+            "cnbc", "bloomberg", "fox news", "abc news", "cbs news"
+        )
     }
 }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.LiveTv
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -34,6 +35,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -53,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.programtv.app.ui.ChannelsScreen
+import pl.programtv.app.ui.MoviesScreen
 import pl.programtv.app.ui.NowScreen
 import pl.programtv.app.ui.ProgramTvTheme
 import pl.programtv.app.ui.ScheduleScreen
@@ -62,6 +65,7 @@ import pl.programtv.app.ui.formatShortDateTime
 private enum class Tab(val title: String, val icon: ImageVector) {
     NOW("Teraz", Icons.Filled.LiveTv),
     SCHEDULE("Program", Icons.Filled.CalendarMonth),
+    MOVIES("Filmy", Icons.Filled.Movie),
     SEARCH("Szukaj", Icons.Filled.Search),
     CHANNELS("Kanały", Icons.Filled.Tune)
 }
@@ -171,6 +175,7 @@ private fun ProgramTvApp(viewModel: AppViewModel = viewModel()) {
         when (currentTab) {
             Tab.NOW -> NowScreen(viewModel, padding)
             Tab.SCHEDULE -> ScheduleScreen(viewModel, padding)
+            Tab.MOVIES -> MoviesScreen(viewModel, padding)
             Tab.SEARCH -> SearchScreen(viewModel, padding)
             Tab.CHANNELS -> ChannelsScreen(viewModel, padding)
         }
@@ -180,8 +185,10 @@ private fun ProgramTvApp(viewModel: AppViewModel = viewModel()) {
         SettingsDialog(
             currentUrl = viewModel.epgUrl,
             lastUpdateMillis = refreshState.lastUpdateMillis,
-            onSave = { url ->
+            polishOnly = viewModel.polishOnly,
+            onSave = { url, polishOnly ->
                 viewModel.setEpgUrl(url)
+                viewModel.setPolishOnly(polishOnly)
                 showSettings = false
                 viewModel.refresh()
             },
@@ -194,10 +201,12 @@ private fun ProgramTvApp(viewModel: AppViewModel = viewModel()) {
 private fun SettingsDialog(
     currentUrl: String,
     lastUpdateMillis: Long,
-    onSave: (String) -> Unit,
+    polishOnly: Boolean,
+    onSave: (String, Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
     var url by remember { mutableStateOf(currentUrl) }
+    var polishOnlyChecked by remember { mutableStateOf(polishOnly) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -217,6 +226,28 @@ private fun SettingsDialog(
                     label = { Text("Adres URL (XMLTV)") },
                     singleLine = true
                 )
+                Spacer(Modifier.padding(vertical = 8.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Tylko polskie kanały",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Ukrywa stacje radiowe oraz kanały niepolskojęzyczne.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = polishOnlyChecked,
+                        onCheckedChange = { polishOnlyChecked = it }
+                    )
+                }
                 if (lastUpdateMillis > 0) {
                     Spacer(Modifier.padding(vertical = 6.dp))
                     Text(
@@ -228,7 +259,7 @@ private fun SettingsDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(url.trim()) },
+                onClick = { onSave(url.trim(), polishOnlyChecked) },
                 enabled = url.trim().startsWith("http")
             ) { Text("Zapisz i odśwież") }
         },
