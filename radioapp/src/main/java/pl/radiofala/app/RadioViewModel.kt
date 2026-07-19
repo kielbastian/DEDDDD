@@ -165,6 +165,17 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
         playInternal(list[prev])
     }
 
+    /** Niektóre stacje mają dziesiątki tagów w jednym stringu (np. "70s,80s,...,webradio") –
+     * bierzemy tylko kilka pierwszych, żeby podtytuł odtwarzacza nie rozjeżdżał layoutu. */
+    private fun formatSubtitle(tags: String): String {
+        val cleaned = tags.split(",")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .take(3)
+            .joinToString(" • ")
+        return cleaned.ifBlank { "Radio Fala" }
+    }
+
     private fun playInternal(station: RadioStation) {
         _currentStation.value = station
         viewModelScope.launch {
@@ -176,7 +187,7 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
             player.play(
                 mediaId = station.stationUuid,
                 title = station.name,
-                subtitle = station.tags.takeIf { it.isNotBlank() } ?: "Radio Fala",
+                subtitle = formatSubtitle(station.tags),
                 streamUrl = url,
                 artworkUri = station.faviconUrl
             )
