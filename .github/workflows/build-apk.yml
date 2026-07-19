@@ -39,6 +39,7 @@ jobs:
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             cncapp/build/outputs/apk/debug/cncapp-debug.apk
+            radioapp/build/outputs/apk/debug/radioapp-debug.apk
 
       - name: Opublikuj APK w wydaniu (release)
         uses: softprops/action-gh-release@v2
@@ -47,9 +48,11 @@ jobs:
           name: "Najnowsze APK"
           body: >
             Automatycznie zbudowane pliki APK.
-            app-debug.apk to Program TV, cncapp-debug.apk to Kalkulator CNC.
+            app-debug.apk to Program TV, cncapp-debug.apk to Kalkulator CNC,
+            radioapp-debug.apk to Radio Fala.
             Pobierz odpowiedni plik na telefon i zainstaluj.
           prerelease: true
           files: |
             app/build/outputs/apk/debug/app-debug.apk
             cncapp/build/outputs/apk/debug/cncapp-debug.apk
+            radioapp/build/outputs/apk/debug/radioapp-debug.apk
