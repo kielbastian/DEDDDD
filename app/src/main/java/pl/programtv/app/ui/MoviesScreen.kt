@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -17,11 +18,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,18 +36,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import pl.programtv.app.AppViewModel
 import pl.programtv.app.MOVIE_GENRES
 import pl.programtv.app.data.ProgrammeWithChannel
+import pl.programtv.app.data.reminderKeyOf
 
 /** Ekran „Filmy” – najciekawsze filmy pełnometrażowe pogrupowane w gatunki. */
 @Composable
 fun MoviesScreen(viewModel: AppViewModel, padding: PaddingValues) {
     val state by viewModel.moviesState.collectAsState()
     var selectedProgramme by remember { mutableStateOf<ProgrammeWithChannel?>(null) }
+    val reminderKeys by viewModel.reminderKeys.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.ensureMoviesLoaded() }
 
@@ -88,19 +94,29 @@ fun MoviesScreen(viewModel: AppViewModel, padding: PaddingValues) {
                     SectionHeader("Filmy pełnometrażowe", "${state.movies.size} pozycji")
                 }
                 items(state.movies, key = { it.programme.id }) { item ->
-                    MovieCard(item) { selectedProgramme = item }
+                    val isReminded = reminderKeyOf(
+                        item.programme.channelId,
+                        item.programme.startMillis
+                    ) in reminderKeys
+                    MovieCard(item, isReminded) { selectedProgramme = item }
                 }
             }
         }
     }
 
     selectedProgramme?.let { item ->
-        ProgrammeDetailDialog(item) { selectedProgramme = null }
+        ProgrammeDetailDialog(
+            item = item,
+            isReminderSet = reminderKeyOf(item.programme.channelId, item.programme.startMillis) in reminderKeys,
+            canRemind = viewModel.canRemind(item.programme),
+            onToggleReminder = { viewModel.toggleReminder(item) },
+            onDismiss = { selectedProgramme = null }
+        )
     }
 }
 
 @Composable
-private fun MovieCard(item: ProgrammeWithChannel, onClick: () -> Unit) {
+private fun MovieCard(item: ProgrammeWithChannel, isReminded: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -116,13 +132,25 @@ private fun MovieCard(item: ProgrammeWithChannel, onClick: () -> Unit) {
             ChannelLogo(item.channelName, item.channelIconUrl, size = 48.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    item.programme.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        item.programme.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isReminded) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = "Przypomnienie ustawione",
+                            tint = Color(0xFFE0A548),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     item.channelName,

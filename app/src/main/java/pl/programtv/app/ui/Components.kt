@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -123,14 +125,20 @@ private fun InitialsAvatar(name: String, size: Dp, shape: RoundedCornerShape) {
 
 /** Okno ze szczegółami filmu/programu – pokazywane po dotknięciu pozycji. */
 @Composable
-fun ProgrammeDetailDialog(item: ProgrammeWithChannel, onDismiss: () -> Unit) {
+fun ProgrammeDetailDialog(
+    item: ProgrammeWithChannel,
+    isReminderSet: Boolean,
+    canRemind: Boolean,
+    onToggleReminder: () -> Unit,
+    onDismiss: () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ChannelLogo(item.channelName, item.channelIconUrl, size = 36.dp)
                 Spacer(Modifier.width(10.dp))
-                Column {
+                Column(Modifier.weight(1f)) {
                     Text(
                         item.programme.title,
                         style = MaterialTheme.typography.titleMedium,
@@ -141,6 +149,17 @@ fun ProgrammeDetailDialog(item: ProgrammeWithChannel, onDismiss: () -> Unit) {
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
+                }
+                if (canRemind || isReminderSet) {
+                    IconButton(onClick = onToggleReminder) {
+                        Icon(
+                            if (isReminderSet) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = if (isReminderSet)
+                                "Usuń przypomnienie" else "Ustaw przypomnienie",
+                            tint = if (isReminderSet) Color(0xFFE0A548)
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         },
@@ -165,6 +184,21 @@ fun ProgrammeDetailDialog(item: ProgrammeWithChannel, onDismiss: () -> Unit) {
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
+                }
+                if (isReminderSet) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Otrzymasz powiadomienie na 2 minuty przed startem.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFE0A548)
+                    )
+                } else if (!canRemind) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Przypomnienia dostępne tylko dla nadchodzących pozycji.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(

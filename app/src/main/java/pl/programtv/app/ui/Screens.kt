@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -51,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
@@ -62,6 +64,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import pl.programtv.app.AppViewModel
 import pl.programtv.app.data.ProgrammeWithChannel
+import pl.programtv.app.data.reminderKeyOf
 
 /** Ekran "Teraz w TV" – co aktualnie leci na wybranych kanałach. */
 @Composable
@@ -70,6 +73,7 @@ fun NowScreen(viewModel: AppViewModel, padding: PaddingValues) {
     val selectedChannels by viewModel.selectedChannels.collectAsState()
     var query by remember { mutableStateOf("") }
     var selectedProgramme by remember { mutableStateOf<ProgrammeWithChannel?>(null) }
+    val reminderKeys by viewModel.reminderKeys.collectAsState()
 
     if (selectedChannels.isEmpty()) {
         EmptyInfo(
@@ -143,7 +147,13 @@ fun NowScreen(viewModel: AppViewModel, padding: PaddingValues) {
     }
 
     selectedProgramme?.let { item ->
-        ProgrammeDetailDialog(item) { selectedProgramme = null }
+        ProgrammeDetailDialog(
+            item = item,
+            isReminderSet = reminderKeyOf(item.programme.channelId, item.programme.startMillis) in reminderKeys,
+            canRemind = viewModel.canRemind(item.programme),
+            onToggleReminder = { viewModel.toggleReminder(item) },
+            onDismiss = { selectedProgramme = null }
+        )
     }
 }
 
@@ -227,6 +237,7 @@ fun ScheduleScreen(viewModel: AppViewModel, padding: PaddingValues) {
     val currentChannelId by viewModel.scheduleChannelId.collectAsState()
     var query by remember { mutableStateOf("") }
     var selectedProgramme by remember { mutableStateOf<ProgrammeWithChannel?>(null) }
+    val reminderKeys by viewModel.reminderKeys.collectAsState()
 
     // Ustaw domyślny kanał: najpierw z wybranych, w razie potrzeby dowolny.
     LaunchedEffect(selectedChannels, allChannels) {
@@ -340,7 +351,11 @@ fun ScheduleScreen(viewModel: AppViewModel, padding: PaddingValues) {
                             )
                         }
                         items(items, key = { it.programme.id }) { item ->
-                            ScheduleRow(item) { selectedProgramme = item }
+                            val isReminded = reminderKeyOf(
+                                item.programme.channelId,
+                                item.programme.startMillis
+                            ) in reminderKeys
+                            ScheduleRow(item, isReminded) { selectedProgramme = item }
                         }
                     }
                 }
@@ -349,12 +364,18 @@ fun ScheduleScreen(viewModel: AppViewModel, padding: PaddingValues) {
     }
 
     selectedProgramme?.let { item ->
-        ProgrammeDetailDialog(item) { selectedProgramme = null }
+        ProgrammeDetailDialog(
+            item = item,
+            isReminderSet = reminderKeyOf(item.programme.channelId, item.programme.startMillis) in reminderKeys,
+            canRemind = viewModel.canRemind(item.programme),
+            onToggleReminder = { viewModel.toggleReminder(item) },
+            onDismiss = { selectedProgramme = null }
+        )
     }
 }
 
 @Composable
-private fun ScheduleRow(item: ProgrammeWithChannel, onClick: () -> Unit) {
+private fun ScheduleRow(item: ProgrammeWithChannel, isReminded: Boolean, onClick: () -> Unit) {
     val now = System.currentTimeMillis()
     val isNow = item.programme.startMillis <= now && now < item.programme.stopMillis
     val bg = if (isNow) MaterialTheme.colorScheme.primaryContainer
@@ -395,6 +416,15 @@ private fun ScheduleRow(item: ProgrammeWithChannel, onClick: () -> Unit) {
                     )
                 }
             }
+            if (isReminded) {
+                Icon(
+                    Icons.Filled.Star,
+                    contentDescription = "Przypomnienie ustawione",
+                    tint = Color(0xFFE0A548),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+            }
             if (isNow) LivePill()
         }
     }
@@ -405,6 +435,7 @@ private fun ScheduleRow(item: ProgrammeWithChannel, onClick: () -> Unit) {
 fun SearchScreen(viewModel: AppViewModel, padding: PaddingValues) {
     val state by viewModel.searchState.collectAsState()
     var selectedProgramme by remember { mutableStateOf<ProgrammeWithChannel?>(null) }
+    val reminderKeys by viewModel.reminderKeys.collectAsState()
 
     Column(Modifier.fillMaxSize().padding(padding)) {
         OutlinedTextField(
@@ -474,14 +505,24 @@ fun SearchScreen(viewModel: AppViewModel, padding: PaddingValues) {
                     }
                 }
                 items(state.results, key = { it.programme.id }) { item ->
-                    SearchResultCard(item) { selectedProgramme = item }
+                    val isReminded = reminderKeyOf(
+                        item.programme.channelId,
+                        item.programme.startMillis
+                    ) in reminderKeys
+                    SearchResultCard(item, isReminded) { selectedProgramme = item }
                 }
             }
         }
     }
 
     selectedProgramme?.let { item ->
-        ProgrammeDetailDialog(item) { selectedProgramme = null }
+        ProgrammeDetailDialog(
+            item = item,
+            isReminderSet = reminderKeyOf(item.programme.channelId, item.programme.startMillis) in reminderKeys,
+            canRemind = viewModel.canRemind(item.programme),
+            onToggleReminder = { viewModel.toggleReminder(item) },
+            onDismiss = { selectedProgramme = null }
+        )
     }
 }
 
@@ -507,7 +548,7 @@ private fun SuggestionRow(text: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SearchResultCard(item: ProgrammeWithChannel, onClick: () -> Unit) {
+private fun SearchResultCard(item: ProgrammeWithChannel, isReminded: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -523,13 +564,25 @@ private fun SearchResultCard(item: ProgrammeWithChannel, onClick: () -> Unit) {
             ChannelLogo(item.channelName, item.channelIconUrl)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(
-                    item.programme.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        item.programme.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isReminded) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Filled.Star,
+                            contentDescription = "Przypomnienie ustawione",
+                            tint = Color(0xFFE0A548),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     item.channelName,

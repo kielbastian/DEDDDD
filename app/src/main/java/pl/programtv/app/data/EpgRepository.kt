@@ -19,6 +19,7 @@ class EpgRepository(context: Context) {
     private val prefs = context.getSharedPreferences("epg_prefs", Context.MODE_PRIVATE)
     private val db = EpgDatabase.get(context)
     val dao: EpgDao = db.epgDao()
+    val reminderDao: ReminderDao = db.reminderDao()
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
@@ -79,6 +80,7 @@ class EpgRepository(context: Context) {
             }
 
             dao.replaceAll(channels, programmes)
+            reminderDao.deleteExpired(System.currentTimeMillis())
             prefs.edit().putLong(KEY_LAST_UPDATE, System.currentTimeMillis()).apply()
         }
     }

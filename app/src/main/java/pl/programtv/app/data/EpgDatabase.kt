@@ -6,13 +6,14 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 
 @Database(
-    entities = [ChannelEntity::class, ProgrammeEntity::class],
-    version = 1,
+    entities = [ChannelEntity::class, ProgrammeEntity::class, ReminderEntity::class],
+    version = 2,
     exportSchema = false
 )
 abstract class EpgDatabase : RoomDatabase() {
 
     abstract fun epgDao(): EpgDao
+    abstract fun reminderDao(): ReminderDao
 
     companion object {
         @Volatile

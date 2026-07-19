@@ -12,12 +12,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pl.programtv.app.data.ChannelEntity
 import pl.programtv.app.data.EpgRepository
+import pl.programtv.app.data.ProgrammeEntity
 import pl.programtv.app.data.ProgrammeWithChannel
+import pl.programtv.app.data.ReminderEntity
+import pl.programtv.app.data.reminderKeyOf
+import pl.programtv.app.reminders.ReminderScheduler
 import java.io.IOException
 
 data class RefreshUiState(
@@ -62,6 +67,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val epgUrl: String get() = repo.epgUrl
     val polishOnly: Boolean get() = repo.polishOnly
+
+    /** Klucze przypomnień aktualnie ustawionych – do podświetlania gwiazdek. */
+    val reminderKeys: StateFlow<Set<String>> = repo.reminderDao.observeReminders()
+        .map { list -> list.map { it.key }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     val channels: StateFlow<List<ChannelEntity>> = repo.dao.observeChannels()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -149,6 +159,35 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setEpgUrl(url: String) {
         repo.epgUrl = url
+    }
+
+    /** Czy dla tej pozycji da się jeszcze ustawić przypomnienie (musi być w przyszłości). */
+    fun canRemind(programme: ProgrammeEntity): Boolean =
+        programme.startMillis > System.currentTimeMillis()
+
+    /** Włącza/wyłącza przypomnienie (gwiazdkę) dla danej pozycji programu. */
+    fun toggleReminder(item: ProgrammeWithChannel) {
+        val programme = item.programme
+        val key = reminderKeyOf(programme.channelId, programme.startMillis)
+        val app = getApplication<Application>()
+        viewModelScope.launch {
+            if (key in reminderKeys.value) {
+                repo.reminderDao.deleteByKey(key)
+                ReminderScheduler.cancel(app, key)
+            } else {
+                if (!canRemind(programme)) return@launch
+                val reminder = ReminderEntity(
+                    key = key,
+                    channelId = programme.channelId,
+                    channelName = item.channelName,
+                    title = programme.title,
+                    startMillis = programme.startMillis,
+                    stopMillis = programme.stopMillis
+                )
+                repo.reminderDao.insert(reminder)
+                ReminderScheduler.schedule(app, reminder)
+            }
+        }
     }
 
     fun setPolishOnly(value: Boolean) {

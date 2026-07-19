@@ -40,3 +40,20 @@ data class ProgrammeWithChannel(
     val channelName: String,
     val channelIconUrl: String?
 )
+
+/**
+ * Przypomnienie o programie – zaznaczone gwiazdką przez użytkownika.
+ * Klucz to kanał+godzina startu, bo pozycje programu są usuwane
+ * i wstawiane na nowo przy każdym odświeżeniu (autoGenerate id się zmienia).
+ */
+@Entity(tableName = "reminders")
+data class ReminderEntity(
+    @PrimaryKey val key: String,
+    val channelId: String,
+    val channelName: String,
+    val title: String,
+    val startMillis: Long,
+    val stopMillis: Long
+)
+
+fun reminderKeyOf(channelId: String, startMillis: Long): String = "$channelId#$startMillis"
