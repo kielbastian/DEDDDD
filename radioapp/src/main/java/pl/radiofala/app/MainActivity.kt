@@ -29,8 +29,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,7 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
@@ -60,6 +60,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        hideSystemBars()
 
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -73,6 +75,20 @@ class MainActivity : ComponentActivity() {
                 RadioFalaApp()
             }
         }
+    }
+
+    // Cała aplikacja jest immersyjna – chowa pasek nawigacyjny i status bar telefonu.
+    // System czasem przywraca paski (np. po powrocie z tła), więc chowamy je ponownie
+    // za każdym razem, gdy okno odzyskuje fokus.
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) hideSystemBars()
+    }
+
+    private fun hideSystemBars() {
+        val controller = WindowCompat.getInsetsController(window, window.decorView)
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.systemBars())
     }
 }
 
@@ -92,21 +108,8 @@ private fun RadioFalaApp(viewModel: RadioViewModel = viewModel()) {
     val canSkip by viewModel.canSkip.collectAsState()
     val currentStation by viewModel.currentStation.collectAsState()
 
-    // Pełny odtwarzacz jest immersyjny – chowa też przyciski nawigacyjne telefonu.
-    val view = LocalView.current
-    DisposableEffect(playerExpanded) {
-        val window = (view.context as android.app.Activity).window
-        val controller = WindowCompat.getInsetsController(window, view)
-        if (playerExpanded) {
-            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            controller.hide(WindowInsetsCompat.Type.systemBars())
-        } else {
-            controller.show(WindowInsetsCompat.Type.systemBars())
-        }
-        onDispose {
-            controller.show(WindowInsetsCompat.Type.systemBars())
-        }
-    }
+    // Mini-odtwarzacz zajmuje ok. 1/4 wysokości ekranu.
+    val miniPlayerHeight = (LocalConfiguration.current.screenHeightDp / 4).dp
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -152,8 +155,12 @@ private fun RadioFalaApp(viewModel: RadioViewModel = viewModel()) {
                     MiniPlayerBar(
                         playback = playback,
                         faviconUrl = currentStation?.faviconUrl,
+                        canSkip = canSkip,
+                        height = miniPlayerHeight,
                         onExpand = { playerExpanded = true },
-                        onTogglePlayPause = viewModel::togglePlayPause
+                        onTogglePlayPause = viewModel::togglePlayPause,
+                        onPrevious = viewModel::playPrevious,
+                        onNext = viewModel::playNext
                     )
                 }
             }
