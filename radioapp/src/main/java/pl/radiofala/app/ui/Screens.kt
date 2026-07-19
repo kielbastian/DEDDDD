@@ -211,7 +211,7 @@ fun RadioSearchScreen(
                         isFavorite = station.stationUuid in favoriteIds,
                         isCurrent = station.stationUuid == currentMediaId,
                         isPlaying = isPlaying && station.stationUuid == currentMediaId,
-                        onPlay = { viewModel.play(station) },
+                        onPlay = { viewModel.play(station, state.results) },
                         onToggleFavorite = { viewModel.toggleFavorite(station) }
                     )
                 }

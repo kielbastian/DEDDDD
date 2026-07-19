@@ -20,8 +20,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.AlertDialog
@@ -63,15 +66,15 @@ fun MiniPlayerBar(
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            StationLogo(playback.title ?: "?", faviconUrl, size = 40.dp)
-            Spacer(Modifier.width(10.dp))
+            StationLogo(playback.title ?: "?", faviconUrl, size = 48.dp)
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     playback.title ?: "",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -85,15 +88,23 @@ fun MiniPlayerBar(
                 )
             }
             if (playback.isBuffering) {
-                CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
             } else {
                 IconButton(onClick = onTogglePlayPause) {
                     Icon(
                         if (playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = if (playback.isPlaying) "Pauza" else "Odtwórz",
-                        tint = MaterialTheme.colorScheme.primary
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
+            }
+            IconButton(onClick = onExpand) {
+                Icon(
+                    Icons.Filled.KeyboardArrowUp,
+                    contentDescription = "Maksymalizuj odtwarzacz",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -106,8 +117,11 @@ fun FullPlayerScreen(
     faviconUrl: String?,
     isFavorite: Boolean,
     sleepMinutesActive: Int?,
+    canSkip: Boolean,
     onToggleFavorite: () -> Unit,
     onTogglePlayPause: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     onStop: () -> Unit,
     onSetSleepTimer: (Int) -> Unit,
     onCancelSleepTimer: () -> Unit,
@@ -139,40 +153,45 @@ fun FullPlayerScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.weight(0.6f))
 
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Box(
-                    modifier = Modifier.size(220.dp).padding(8.dp),
+                    modifier = Modifier.size(300.dp).padding(8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    StationLogo(playback.title ?: "Radio", faviconUrl, size = 220.dp)
+                    StationLogo(playback.title ?: "Radio", faviconUrl, size = 300.dp)
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(32.dp))
 
             Text(
                 playback.title ?: "Wybierz stację",
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
             Text(
                 if (playback.isBuffering) "Buforowanie…" else playback.subtitle.orEmpty(),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                EqualizerBars(playback.isPlaying, barColor = MaterialTheme.colorScheme.primary)
+                EqualizerBars(
+                    playback.isPlaying,
+                    barColor = MaterialTheme.colorScheme.primary,
+                    barWidth = 6.dp,
+                    barMaxHeight = 28.dp
+                )
             }
 
             if (sleepMinutesActive != null) {
@@ -193,18 +212,32 @@ fun FullPlayerScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onToggleFavorite, modifier = Modifier.size(56.dp)) {
+                IconButton(onClick = onToggleFavorite, modifier = Modifier.size(52.dp)) {
                     Icon(
                         if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                         contentDescription = "Ulubione",
                         tint = if (isFavorite) Color(0xFFE0A548) else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onPrevious,
+                    enabled = canSkip,
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.SkipPrevious,
+                        contentDescription = "Poprzednia stacja",
+                        modifier = Modifier.size(32.dp),
+                        tint = if (canSkip) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                     )
                 }
 
                 Box(
                     modifier = Modifier
-                        .size(84.dp)
+                        .size(104.dp)
                         .background(MaterialTheme.colorScheme.primary, CircleShape)
                         .clickable(onClick = onTogglePlayPause),
                     contentAlignment = Alignment.Center
@@ -212,26 +245,42 @@ fun FullPlayerScreen(
                     if (playback.isBuffering) {
                         CircularProgressIndicator(
                             color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(36.dp)
                         )
                     } else {
                         Icon(
                             if (playback.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                             contentDescription = if (playback.isPlaying) "Pauza" else "Odtwórz",
                             tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(48.dp)
                         )
                     }
                 }
 
-                IconButton(onClick = onStop, modifier = Modifier.size(56.dp)) {
+                IconButton(
+                    onClick = onNext,
+                    enabled = canSkip,
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Icon(
+                        Icons.Filled.SkipNext,
+                        contentDescription = "Następna stacja",
+                        modifier = Modifier.size(32.dp),
+                        tint = if (canSkip) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                    )
+                }
+
+                IconButton(onClick = onStop, modifier = Modifier.size(52.dp)) {
                     Icon(
                         Icons.Filled.Stop,
                         contentDescription = "Zatrzymaj",
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
+
+            Spacer(Modifier.height(12.dp))
         }
     }
 

@@ -30,6 +30,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,8 +38,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import pl.radiofala.app.ui.CategoryTabs
 import pl.radiofala.app.ui.FullPlayerScreen
@@ -84,9 +89,24 @@ private fun RadioFalaApp(viewModel: RadioViewModel = viewModel()) {
     val favoriteIds by viewModel.favoriteIds.collectAsState()
     val playback by viewModel.playback.collectAsState()
     val sleepMinutes by viewModel.sleepTimerMinutes.collectAsState()
+    val canSkip by viewModel.canSkip.collectAsState()
+    val currentStation by viewModel.currentStation.collectAsState()
 
-    val currentStation = (stationsState.stations + searchState.results)
-        .firstOrNull { it.stationUuid == playback.currentMediaId }
+    // Pełny odtwarzacz jest immersyjny – chowa też przyciski nawigacyjne telefonu.
+    val view = LocalView.current
+    DisposableEffect(playerExpanded) {
+        val window = (view.context as android.app.Activity).window
+        val controller = WindowCompat.getInsetsController(window, view)
+        if (playerExpanded) {
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        }
+        onDispose {
+            controller.show(WindowInsetsCompat.Type.systemBars())
+        }
+    }
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
@@ -159,7 +179,7 @@ private fun RadioFalaApp(viewModel: RadioViewModel = viewModel()) {
                         favoriteIds = favoriteIds,
                         currentMediaId = playback.currentMediaId,
                         isPlaying = playback.isPlaying,
-                        onPlay = viewModel::play,
+                        onPlay = { station -> viewModel.play(station, stationsState.stations) },
                         onToggleFavorite = viewModel::toggleFavorite,
                         padding = androidx.compose.foundation.layout.PaddingValues(0.dp)
                     )
@@ -177,10 +197,13 @@ private fun RadioFalaApp(viewModel: RadioViewModel = viewModel()) {
                 faviconUrl = currentStation?.faviconUrl,
                 isFavorite = currentStation?.stationUuid?.let { it in favoriteIds } ?: false,
                 sleepMinutesActive = sleepMinutes,
+                canSkip = canSkip,
                 onToggleFavorite = {
                     currentStation?.let { viewModel.toggleFavorite(it) }
                 },
                 onTogglePlayPause = viewModel::togglePlayPause,
+                onPrevious = viewModel::playPrevious,
+                onNext = viewModel::playNext,
                 onStop = {
                     viewModel.stopPlayback()
                     playerExpanded = false

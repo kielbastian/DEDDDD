@@ -75,7 +75,8 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
                 }.catch { e -> emit(fetchError(e)) }
                 is CategorySource.Country -> flow {
                     emit(StationsUiState(loading = true))
-                    emit(StationsUiState(stations = api.byCountry(source.code)))
+                    // Więcej niż domyślne 40 - polskich stacji w bazie jest sporo (RMF, VOX, Eska itd.).
+                    emit(StationsUiState(stations = api.byCountry(source.code, limit = 150)))
                 }.catch { e -> emit(fetchError(e)) }
             }
         }
@@ -128,7 +129,44 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun play(station: RadioStation) {
+    /** Lista, z której odtwarzana jest bieżąca stacja – potrzebna do „poprzednia/następna”. */
+    private val _queue = MutableStateFlow<List<RadioStation>>(emptyList())
+    private val _queueIndex = MutableStateFlow(-1)
+
+    /** Pełne dane odtwarzanej stacji (favicon, tagi) – niezależne od tego, jaka kategoria jest teraz widoczna. */
+    private val _currentStation = MutableStateFlow<RadioStation?>(null)
+    val currentStation: StateFlow<RadioStation?> = _currentStation
+
+    val canSkip: StateFlow<Boolean> = _queue
+        .map { it.size > 1 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    /** Odtwarza stację z podanej listy (kategoria albo wyniki wyszukiwania) – zapamiętuje kolejkę. */
+    fun play(station: RadioStation, queue: List<RadioStation> = listOf(station)) {
+        val index = queue.indexOfFirst { it.stationUuid == station.stationUuid }.let { if (it < 0) 0 else it }
+        _queue.value = queue
+        _queueIndex.value = index
+        playInternal(station)
+    }
+
+    fun playNext() {
+        val list = _queue.value
+        if (list.isEmpty()) return
+        val next = (_queueIndex.value + 1).let { if (it >= list.size) 0 else it }
+        _queueIndex.value = next
+        playInternal(list[next])
+    }
+
+    fun playPrevious() {
+        val list = _queue.value
+        if (list.isEmpty()) return
+        val prev = (_queueIndex.value - 1).let { if (it < 0) list.size - 1 else it }
+        _queueIndex.value = prev
+        playInternal(list[prev])
+    }
+
+    private fun playInternal(station: RadioStation) {
+        _currentStation.value = station
         viewModelScope.launch {
             val url = try {
                 api.resolveStreamUrl(station)
@@ -149,7 +187,13 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
     val sleepTimerMinutes: StateFlow<Int?> = _sleepTimerMinutes
 
     fun togglePlayPause() = player.togglePlayPause()
-    fun stopPlayback() = player.stop()
+
+    fun stopPlayback() {
+        player.stop()
+        _currentStation.value = null
+        _queue.value = emptyList()
+        _queueIndex.value = -1
+    }
 
     private var sleepTimerClearJob: Job? = null
 

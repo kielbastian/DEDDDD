@@ -82,17 +82,23 @@ private fun InitialsAvatar(name: String, size: Dp, shape: RoundedCornerShape) {
 
 /** Animowane paski korektora – widoczne, gdy stacja gra. */
 @Composable
-fun EqualizerBars(playing: Boolean, modifier: Modifier = Modifier, barColor: Color = MaterialTheme.colorScheme.primary) {
+fun EqualizerBars(
+    playing: Boolean,
+    modifier: Modifier = Modifier,
+    barColor: Color = MaterialTheme.colorScheme.primary,
+    barWidth: Dp = 4.dp,
+    barMaxHeight: Dp = 18.dp
+) {
     Row(modifier, verticalAlignment = Alignment.Bottom) {
         repeat(4) { index ->
-            EqualizerBar(playing, index, barColor)
-            if (index != 3) Box(Modifier.width(3.dp))
+            EqualizerBar(playing, index, barColor, barWidth, barMaxHeight)
+            if (index != 3) Box(Modifier.width(barWidth * 0.75f))
         }
     }
 }
 
 @Composable
-private fun EqualizerBar(playing: Boolean, index: Int, color: Color) {
+private fun EqualizerBar(playing: Boolean, index: Int, color: Color, barWidth: Dp, barMaxHeight: Dp) {
     val transition = rememberInfiniteTransition(label = "eq$index")
     val height by transition.animateFloat(
         initialValue = 0.25f,
@@ -105,8 +111,8 @@ private fun EqualizerBar(playing: Boolean, index: Int, color: Color) {
     )
     Box(
         modifier = Modifier
-            .width(4.dp)
-            .height((18.dp.value * height).dp)
+            .width(barWidth)
+            .height(barMaxHeight * height)
             .clip(RoundedCornerShape(2.dp))
             .background(color)
     )
