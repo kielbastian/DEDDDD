@@ -14,6 +14,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import pl.radiofala.app.R
 
 /**
  * Usługa pierwszoplanowa: odtwarza radio w tle i przy zgaszonym ekranie,
@@ -87,12 +88,12 @@ class RadioPlaybackService : MediaSessionService() {
             CommandButton.Builder()
                 .setDisplayName("Poprzednia stacja")
                 .setSessionCommand(SessionCommand(CMD_PREVIOUS_STATION, Bundle.EMPTY))
-                .setIconResId(android.R.drawable.ic_media_previous)
+                .setIconResId(R.drawable.ic_notif_skip_previous)
                 .build(),
             CommandButton.Builder()
                 .setDisplayName("Następna stacja")
                 .setSessionCommand(SessionCommand(CMD_NEXT_STATION, Bundle.EMPTY))
-                .setIconResId(android.R.drawable.ic_media_next)
+                .setIconResId(R.drawable.ic_notif_skip_next)
                 .build()
         )
     }

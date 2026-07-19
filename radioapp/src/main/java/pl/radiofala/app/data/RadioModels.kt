@@ -69,5 +69,9 @@ val RADIO_CATEGORIES = listOf(
     RadioCategory("2000s", "Lata 2000", 0xFF3B82F6, CategorySource.Tag("2000s")),
     RadioCategory("rock", "Rock", 0xFF22C55E, CategorySource.Tag("rock")),
     RadioCategory("pop", "Pop", 0xFF46C7D8, CategorySource.Tag("pop")),
-    RadioCategory("dance", "Dance / Disco", 0xFFF97316, CategorySource.Tag("dance"))
+    RadioCategory("dance", "Dance / Disco", 0xFFF97316, CategorySource.Tag("dance")),
+    RadioCategory("discopolo", "Disco Polo", 0xFFD946EF, CategorySource.Tag("disco polo")),
+    RadioCategory("chillout", "Chillout", 0xFF14B8A6, CategorySource.Tag("chillout")),
+    RadioCategory("classical", "Muzyka klasyczna", 0xFF64748B, CategorySource.Tag("classical")),
+    RadioCategory("jazz", "Jazz", 0xFFA16207, CategorySource.Tag("jazz"))
 )

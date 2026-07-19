@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -98,6 +99,8 @@ private fun RadioFalaApp(viewModel: RadioViewModel = viewModel()) {
     var searchMode by remember { mutableStateOf(false) }
     var playerExpanded by remember { mutableStateOf(false) }
 
+    androidx.activity.compose.BackHandler(enabled = searchMode) { searchMode = false }
+
     val categories = viewModel.categories
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val stationsState by viewModel.stationsState.collectAsState()
@@ -139,6 +142,13 @@ private fun RadioFalaApp(viewModel: RadioViewModel = viewModel()) {
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface
                     ),
+                    navigationIcon = {
+                        if (searchMode) {
+                            IconButton(onClick = { searchMode = false }) {
+                                Icon(Icons.Filled.ArrowBack, contentDescription = "Wróć")
+                            }
+                        }
+                    },
                     actions = {
                         IconButton(onClick = { searchMode = !searchMode }) {
                             Icon(Icons.Filled.Search, contentDescription = "Szukaj stacji")

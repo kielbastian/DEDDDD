@@ -24,19 +24,19 @@ class RadioBrowserApi {
     // "all.api..." to nazwa DNS rozwiązywana na dowolny działający serwer lustrzany.
     private val baseUrl = "https://all.api.radio-browser.info/json"
 
-    suspend fun byTag(tag: String, limit: Int = 40): List<RadioStation> = withContext(Dispatchers.IO) {
+    suspend fun byTag(tag: String, limit: Int = 100): List<RadioStation> = withContext(Dispatchers.IO) {
         val url = "$baseUrl/stations/bytagexact/${encode(tag)}" +
             "?limit=$limit&hidebroken=true&order=clickcount&reverse=true"
         fetchStations(url)
     }
 
-    suspend fun byCountry(countryCode: String, limit: Int = 40): List<RadioStation> = withContext(Dispatchers.IO) {
+    suspend fun byCountry(countryCode: String, limit: Int = 100): List<RadioStation> = withContext(Dispatchers.IO) {
         val url = "$baseUrl/stations/bycountrycodeexact/${encode(countryCode)}" +
             "?limit=$limit&hidebroken=true&order=clickcount&reverse=true"
         fetchStations(url)
     }
 
-    suspend fun searchByName(query: String, limit: Int = 30): List<RadioStation> = withContext(Dispatchers.IO) {
+    suspend fun searchByName(query: String, limit: Int = 50): List<RadioStation> = withContext(Dispatchers.IO) {
         val url = "$baseUrl/stations/search?name=${encode(query)}" +
             "&limit=$limit&hidebroken=true&order=clickcount&reverse=true"
         fetchStations(url)
