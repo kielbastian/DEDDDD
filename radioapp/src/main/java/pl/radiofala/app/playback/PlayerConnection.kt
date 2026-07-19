@@ -78,6 +78,14 @@ class PlayerConnection(private val context: Context) {
         _state.value = _state.value.copy(currentMediaId = mediaId, title = title, subtitle = subtitle)
     }
 
+    /** Podłącza przyciski „poprzednia/następna stacja” na ekranie blokady do kolejki w ViewModelu. */
+    fun bindQueueNavigator(onPrevious: () -> Unit, onNext: () -> Unit) {
+        RadioPlaybackService.queueNavigator = object : RadioPlaybackService.QueueNavigator {
+            override fun onPreviousRequested() = onPrevious()
+            override fun onNextRequested() = onNext()
+        }
+    }
+
     fun togglePlayPause() {
         controller?.let { c ->
             if (c.isPlaying) c.pause() else c.play()
@@ -104,5 +112,6 @@ class PlayerConnection(private val context: Context) {
     fun release() {
         controller?.release()
         controller = null
+        RadioPlaybackService.queueNavigator = null
     }
 }

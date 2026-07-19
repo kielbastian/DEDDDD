@@ -7,6 +7,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
@@ -78,6 +79,24 @@ class RadioPlaybackService : MediaSessionService() {
         sleepTimerRunnable = null
     }
 
+    // Radio na żywo to zawsze jeden MediaItem – ExoPlayer nigdy nie zgłasza dostępnych
+    // komend seekToNext/seekToPrevious. Dlatego "poprzednia/następna stacja" na ekranie
+    // blokady są realizowane jako własne komendy sesji, pokazane przez custom layout.
+    private val previousNextLayout: List<CommandButton> by lazy {
+        listOf(
+            CommandButton.Builder()
+                .setDisplayName("Poprzednia stacja")
+                .setSessionCommand(SessionCommand(CMD_PREVIOUS_STATION, Bundle.EMPTY))
+                .setIconResId(android.R.drawable.ic_media_previous)
+                .build(),
+            CommandButton.Builder()
+                .setDisplayName("Następna stacja")
+                .setSessionCommand(SessionCommand(CMD_NEXT_STATION, Bundle.EMPTY))
+                .setIconResId(android.R.drawable.ic_media_next)
+                .build()
+        )
+    }
+
     private inner class SleepTimerCallback : MediaSession.Callback {
         override fun onConnect(
             session: MediaSession,
@@ -87,11 +106,17 @@ class RadioPlaybackService : MediaSessionService() {
                 .buildUpon()
                 .add(SessionCommand(CMD_SET_SLEEP_TIMER, Bundle.EMPTY))
                 .add(SessionCommand(CMD_CANCEL_SLEEP_TIMER, Bundle.EMPTY))
+                .add(SessionCommand(CMD_PREVIOUS_STATION, Bundle.EMPTY))
+                .add(SessionCommand(CMD_NEXT_STATION, Bundle.EMPTY))
                 .build()
             return MediaSession.ConnectionResult.accept(
                 availableCommands,
                 MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS
             )
+        }
+
+        override fun onPostConnect(session: MediaSession, controller: MediaSession.ControllerInfo) {
+            session.setCustomLayout(controller, previousNextLayout)
         }
 
         override fun onCustomCommand(
@@ -106,6 +131,8 @@ class RadioPlaybackService : MediaSessionService() {
                     if (minutes > 0) scheduleSleepTimer(minutes)
                 }
                 CMD_CANCEL_SLEEP_TIMER -> clearSleepTimer()
+                CMD_PREVIOUS_STATION -> queueNavigator?.onPreviousRequested()
+                CMD_NEXT_STATION -> queueNavigator?.onNextRequested()
             }
             return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
         }
@@ -114,7 +141,18 @@ class RadioPlaybackService : MediaSessionService() {
     companion object {
         const val CMD_SET_SLEEP_TIMER = "pl.radiofala.app.SET_SLEEP_TIMER"
         const val CMD_CANCEL_SLEEP_TIMER = "pl.radiofala.app.CANCEL_SLEEP_TIMER"
+        const val CMD_PREVIOUS_STATION = "pl.radiofala.app.PREVIOUS_STATION"
+        const val CMD_NEXT_STATION = "pl.radiofala.app.NEXT_STATION"
         const val EXTRA_MINUTES = "minutes"
+
+        /** Most do warstwy ViewModel – tam żyje kolejka stacji, usługa tylko przekazuje żądanie. */
+        interface QueueNavigator {
+            fun onPreviousRequested()
+            fun onNextRequested()
+        }
+
+        @Volatile
+        var queueNavigator: QueueNavigator? = null
 
         fun buildMediaItem(
             mediaId: String,
@@ -126,6 +164,7 @@ class RadioPlaybackService : MediaSessionService() {
             val metadata = androidx.media3.common.MediaMetadata.Builder()
                 .setTitle(title)
                 .setArtist(subtitle)
+                .setAlbumTitle("Marek Kulczycki")
                 .apply {
                     if (!artworkUri.isNullOrBlank()) {
                         setArtworkUri(android.net.Uri.parse(artworkUri))

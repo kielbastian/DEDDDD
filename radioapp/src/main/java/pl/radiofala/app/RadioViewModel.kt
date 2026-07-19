@@ -84,6 +84,7 @@ class RadioViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         player.connect()
+        player.bindQueueNavigator(onPrevious = ::playPrevious, onNext = ::playNext)
     }
 
     private fun fetchError(e: Throwable): StationsUiState = StationsUiState(
