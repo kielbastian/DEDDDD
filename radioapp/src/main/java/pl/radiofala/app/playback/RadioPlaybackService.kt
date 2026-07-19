@@ -138,18 +138,18 @@ class RadioPlaybackService : MediaSessionService() {
         }
     }
 
+    /** Most do warstwy ViewModel – tam żyje kolejka stacji, usługa tylko przekazuje żądanie. */
+    interface QueueNavigator {
+        fun onPreviousRequested()
+        fun onNextRequested()
+    }
+
     companion object {
         const val CMD_SET_SLEEP_TIMER = "pl.radiofala.app.SET_SLEEP_TIMER"
         const val CMD_CANCEL_SLEEP_TIMER = "pl.radiofala.app.CANCEL_SLEEP_TIMER"
         const val CMD_PREVIOUS_STATION = "pl.radiofala.app.PREVIOUS_STATION"
         const val CMD_NEXT_STATION = "pl.radiofala.app.NEXT_STATION"
         const val EXTRA_MINUTES = "minutes"
-
-        /** Most do warstwy ViewModel – tam żyje kolejka stacji, usługa tylko przekazuje żądanie. */
-        interface QueueNavigator {
-            fun onPreviousRequested()
-            fun onNextRequested()
-        }
 
         @Volatile
         var queueNavigator: QueueNavigator? = null
