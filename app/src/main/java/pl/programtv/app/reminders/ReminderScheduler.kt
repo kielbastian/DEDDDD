@@ -22,7 +22,10 @@ object ReminderScheduler {
         val triggerAt = (reminder.startMillis - LEAD_MILLIS)
             .coerceAtLeast(System.currentTimeMillis() + 1_000)
 
-        val pendingIntent = buildPendingIntent(context, reminder.key, reminder.title, reminder.channelName, reminder.startMillis)
+        // create=true (domyślne) zawsze zwraca nie-null PendingIntent.
+        val pendingIntent = buildPendingIntent(
+            context, reminder.key, reminder.title, reminder.channelName, reminder.startMillis
+        )!!
         try {
             alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, pendingIntent)
         } catch (_: SecurityException) {
