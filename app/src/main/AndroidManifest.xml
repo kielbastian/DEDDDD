@@ -5,10 +5,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
-    <!-- Aplikacja TV: brak wymogu ekranu dotykowego, wymaga launchera Leanback. -->
+    <!-- Leanback opcjonalny → działa i na TV, i na telefonie/tablecie.
+         Ekran dotykowy niewymagany (TV z pilotem). -->
     <uses-feature
         android:name="android.software.leanback"
-        android:required="true" />
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.touchscreen"
         android:required="false" />
@@ -35,8 +36,10 @@
             android:theme="@style/Theme.MiBoxIptv">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <!-- Launcher TV (Leanback) zamiast zwykłego LAUNCHER. -->
+                <!-- Launcher TV (Leanback) oraz zwykły LAUNCHER, żeby ikona była
+                     widoczna także na telefonie/tablecie. -->
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
