@@ -28,8 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Button
 import androidx.tv.material3.Text
+import com.mibox.iptv.presentation.common.AppButton
 
 private enum class SourceType { M3U, XTREAM }
 
@@ -64,8 +64,8 @@ fun SourcesScreen(
         Spacer(Modifier.height(8.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { type = SourceType.M3U }) { Text("M3U / M3U8") }
-            Button(onClick = { type = SourceType.XTREAM }) { Text("Xtream Codes") }
+            AppButton(onClick = { type = SourceType.M3U }) { Text("M3U / M3U8", color = Color.White) }
+            AppButton(onClick = { type = SourceType.XTREAM }) { Text("Xtream Codes", color = Color.White) }
         }
         Text(
             text = if (type == SourceType.M3U) "Wybrano: M3U" else "Wybrano: Xtream",
@@ -86,14 +86,19 @@ fun SourcesScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        Button(
+        AppButton(
             onClick = {
                 when (type) {
                     SourceType.M3U -> viewModel.addM3u(name, m3uUrl, epgUrl)
                     SourceType.XTREAM -> viewModel.addXtream(name, host, user, pass)
                 }
             },
-        ) { Text(if (ui.syncing) "Synchronizacja…" else "Zapisz i synchronizuj") }
+        ) {
+            Text(
+                text = if (ui.syncing) "Synchronizacja…" else "Zapisz i synchronizuj",
+                color = Color.White,
+            )
+        }
 
         if (ui.statusText.isNotBlank()) {
             Text(text = ui.statusText, color = Color(0xFFAAAAAA))
@@ -102,7 +107,7 @@ fun SourcesScreen(
 
         if (ui.lastSyncedCount != null && !ui.syncing) {
             Spacer(Modifier.height(8.dp))
-            Button(onClick = onSynced) { Text("Przejdź do kanałów") }
+            AppButton(onClick = onSynced) { Text("Przejdź do kanałów", color = Color.White) }
         }
     }
 }

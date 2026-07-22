@@ -20,11 +20,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Button
-import androidx.tv.material3.Card
 import androidx.tv.material3.Text
 import com.mibox.iptv.domain.model.Category
 import com.mibox.iptv.domain.model.Channel
+import com.mibox.iptv.presentation.common.AppButton
+import com.mibox.iptv.presentation.common.AppCard
 
 /**
  * Główny ekran Live TV. Rail kategorii (LazyRow) + lista kanałów (LazyColumn),
@@ -51,7 +51,7 @@ fun LiveTvScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(text = "Live TV", color = Color.White)
-            Button(onClick = onManageSources) { Text("Źródła") }
+            AppButton(onClick = onManageSources) { Text("Źródła", color = Color.White) }
         }
         Spacer(Modifier.height(12.dp))
 
@@ -79,13 +79,13 @@ fun LiveTvScreen(
 private fun CategoryRail(categories: List<Category>, onSelect: (Category?) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Card(onClick = { onSelect(null) }) {
-                Text(text = "Wszystkie", modifier = Modifier.padding(12.dp))
+            AppCard(onClick = { onSelect(null) }) {
+                Text(text = "Wszystkie", color = Color.White, modifier = Modifier.padding(12.dp))
             }
         }
         items(categories, key = { it.id }) { category ->
-            Card(onClick = { onSelect(category) }) {
-                Text(text = category.name, modifier = Modifier.padding(12.dp))
+            AppCard(onClick = { onSelect(category) }) {
+                Text(text = category.name, color = Color.White, modifier = Modifier.padding(12.dp))
             }
         }
     }
@@ -93,13 +93,11 @@ private fun CategoryRail(categories: List<Category>, onSelect: (Category?) -> Un
 
 @Composable
 private fun ChannelRow(channel: Channel, onClick: () -> Unit) {
-    Card(
+    AppCard(
         onClick = onClick,
         modifier = Modifier.padding(vertical = 4.dp),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(text = channel.name)
-        }
+        Text(text = channel.name, color = Color.White, modifier = Modifier.padding(16.dp))
     }
 }
 
@@ -109,7 +107,9 @@ private fun EmptyState(onManageSources: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = "Brak skonfigurowanego źródła", color = Color.White)
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onManageSources) { Text("Dodaj playlistę M3U / Xtream") }
+            AppButton(onClick = onManageSources) {
+                Text("Dodaj playlistę M3U / Xtream", color = Color.White)
+            }
         }
     }
 }
