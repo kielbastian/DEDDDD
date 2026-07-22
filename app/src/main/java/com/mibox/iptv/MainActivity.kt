@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity(), PipController {
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    CompositionLocalProvider(LocalPipController provides this) {
+                    CompositionLocalProvider(LocalPipController provides this@MainActivity) {
                         AppNavHost()
                     }
                 }
