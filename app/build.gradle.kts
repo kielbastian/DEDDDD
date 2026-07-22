@@ -37,6 +37,7 @@ android {
         jvmTarget = "17"
         freeCompilerArgs += listOf(
             "-opt-in=androidx.tv.material3.ExperimentalTvMaterial3Api",
+            "-opt-in=androidx.media3.common.util.UnstableApi",
         )
     }
     buildFeatures { compose = true }
@@ -49,6 +50,7 @@ dependencies {
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
 
@@ -76,6 +78,10 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
+
+    // Background work (WorkManager + Hilt integration for HiltWorkerFactory)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.hilt.work)
 
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
