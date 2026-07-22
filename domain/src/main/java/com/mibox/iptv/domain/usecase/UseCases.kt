@@ -4,6 +4,7 @@ import com.mibox.iptv.domain.model.Category
 import com.mibox.iptv.domain.model.Channel
 import com.mibox.iptv.domain.model.ContentKind
 import com.mibox.iptv.domain.model.NowNext
+import com.mibox.iptv.domain.model.PlaylistSource
 import com.mibox.iptv.domain.repository.EpgRepository
 import com.mibox.iptv.domain.repository.PlaylistRepository
 import com.mibox.iptv.domain.repository.SyncStatus
@@ -54,4 +55,22 @@ class GetNowNextUseCase @Inject constructor(
     private val epg: EpgRepository,
 ) {
     operator fun invoke(channelTvgId: String): Flow<NowNext> = epg.nowNext(channelTvgId)
+}
+
+class ObserveSourcesUseCase @Inject constructor(
+    private val playlist: PlaylistRepository,
+) {
+    operator fun invoke(): Flow<List<PlaylistSource>> = playlist.sources()
+}
+
+class AddSourceUseCase @Inject constructor(
+    private val playlist: PlaylistRepository,
+) {
+    suspend operator fun invoke(source: PlaylistSource): Long = playlist.addSource(source)
+}
+
+class RemoveSourceUseCase @Inject constructor(
+    private val playlist: PlaylistRepository,
+) {
+    suspend operator fun invoke(sourceId: Long) = playlist.removeSource(sourceId)
 }

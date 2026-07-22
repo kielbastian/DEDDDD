@@ -4,9 +4,11 @@ import com.mibox.iptv.core.DispatcherProvider
 import com.mibox.iptv.data.local.dao.CategoryDao
 import com.mibox.iptv.data.local.dao.ChannelDao
 import com.mibox.iptv.data.local.dao.SourceDao
+import com.mibox.iptv.data.local.entity.CategoryEntity
 import com.mibox.iptv.data.local.entity.ChannelEntity
 import com.mibox.iptv.data.mapper.toDomain
 import com.mibox.iptv.data.mapper.toEntity
+import com.mibox.iptv.data.remote.xtream.XtreamApiFactory
 import com.mibox.iptv.data.parser.M3uEntry
 import com.mibox.iptv.data.parser.M3uParser
 import com.mibox.iptv.domain.model.Category
@@ -29,6 +31,7 @@ class PlaylistRepositoryImpl @Inject constructor(
     private val categoryDao: CategoryDao,
     private val channelDao: ChannelDao,
     private val m3uParser: M3uParser,
+    private val xtreamApiFactory: XtreamApiFactory,
     private val httpClient: OkHttpClient,
     private val dispatchers: DispatcherProvider,
 ) : PlaylistRepository {
@@ -41,27 +44,23 @@ class PlaylistRepositoryImpl @Inject constructor(
 
     override suspend fun removeSource(sourceId: Long) = sourceDao.delete(sourceId)
 
-    /**
-     * Strumieniowa synchronizacja playlisty M3U.
-     *
-     * Kanały są zapisywane partiami po [BATCH_SIZE] — RAM nie rośnie z rozmiarem
-     * playlisty. Kategorie wyprowadzamy z group-title napotkanych po drodze.
-     */
     override fun syncPlaylist(sourceId: Long): Flow<SyncStatus> = flow {
-        emit(SyncStatus.Running(0, "Pobieranie playlisty"))
-
+        emit(SyncStatus.Running(0, "Przygotowanie"))
         val source = sources().first().firstOrNull { it.id == sourceId }
-        val url = when (source) {
-            is PlaylistSource.M3u -> source.url
-            else -> {
-                emit(SyncStatus.Error("Nieobsługiwane źródło (użyj Xtream synk osobno)"))
-                return@flow
-            }
+        when (source) {
+            is PlaylistSource.M3u -> syncM3u(source).collect { emit(it) }
+            is PlaylistSource.Xtream -> syncXtream(source).collect { emit(it) }
+            null -> emit(SyncStatus.Error("Nie znaleziono źródła"))
         }
+    }.flowOn(dispatchers.io)
 
-        channelDao.clearSource(sourceId)
+    // ---- M3U ----------------------------------------------------------------
 
-        val request = Request.Builder().url(url).build()
+    private fun syncM3u(source: PlaylistSource.M3u): Flow<SyncStatus> = flow {
+        emit(SyncStatus.Running(0, "Pobieranie playlisty"))
+        channelDao.clearSource(source.id)
+
+        val request = Request.Builder().url(source.url).build()
         httpClient.newCall(request).execute().use { response ->
             val body = response.body
             if (!response.isSuccessful || body == null) {
@@ -70,11 +69,13 @@ class PlaylistRepositoryImpl @Inject constructor(
             }
 
             val batch = ArrayList<ChannelEntity>(BATCH_SIZE)
+            val groups = LinkedHashSet<String>()
             var total = 0
             var order = 0
 
             m3uParser.parse(body.byteStream()).collect { entry: M3uEntry ->
-                batch += entry.toChannelEntity(sourceId, order++)
+                entry.groupTitle?.let { groups.add(it) }
+                batch += entry.toChannelEntity(source.id, order++)
                 if (batch.size >= BATCH_SIZE) {
                     channelDao.insertBatch(batch)
                     total += batch.size
@@ -86,9 +87,77 @@ class PlaylistRepositoryImpl @Inject constructor(
                 channelDao.insertBatch(batch)
                 total += batch.size
             }
+
+            // Kategorie wyprowadzone z group-title napotkanych w playliście.
+            categoryDao.upsertAll(
+                groups.map { g ->
+                    CategoryEntity(
+                        id = "${source.id}:$g",
+                        sourceId = source.id,
+                        remoteId = g,
+                        name = g,
+                        kind = ContentKind.LIVE.name,
+                    )
+                }
+            )
             emit(SyncStatus.Done(total))
         }
-    }.flowOn(dispatchers.io)
+    }
+
+    // ---- Xtream Codes -------------------------------------------------------
+
+    private fun syncXtream(source: PlaylistSource.Xtream): Flow<SyncStatus> = flow {
+        emit(SyncStatus.Running(0, "Łączenie z serwerem Xtream"))
+        val api = xtreamApiFactory.create(source.host)
+        channelDao.clearSource(source.id)
+
+        // Kategorie live.
+        val categories = api.getLiveCategories(source.username, source.password)
+        categoryDao.upsertAll(
+            categories.map { dto ->
+                CategoryEntity(
+                    id = "${source.id}:${dto.categoryId}",
+                    sourceId = source.id,
+                    remoteId = dto.categoryId,
+                    name = dto.categoryName,
+                    kind = ContentKind.LIVE.name,
+                )
+            }
+        )
+        emit(SyncStatus.Running(categories.size, "Pobrano kategorie"))
+
+        // Strumienie live → kanały (batch insert).
+        val streams = api.getLiveStreams(source.username, source.password)
+        val batch = ArrayList<ChannelEntity>(BATCH_SIZE)
+        var total = 0
+        streams.forEachIndexed { index, dto ->
+            batch += ChannelEntity(
+                sourceId = source.id,
+                categoryId = dto.categoryId?.let { "${source.id}:$it" },
+                name = dto.name,
+                tvgId = dto.epgChannelId,
+                logoUrl = dto.icon,
+                streamUrl = XtreamApiFactory.liveStreamUrl(
+                    source.host, source.username, source.password, dto.streamId,
+                ),
+                sortOrder = index,
+                kind = ContentKind.LIVE.name,
+            )
+            if (batch.size >= BATCH_SIZE) {
+                channelDao.insertBatch(batch)
+                total += batch.size
+                batch.clear()
+                emit(SyncStatus.Running(total, "Import kanałów"))
+            }
+        }
+        if (batch.isNotEmpty()) {
+            channelDao.insertBatch(batch)
+            total += batch.size
+        }
+        emit(SyncStatus.Done(total))
+    }
+
+    // ---- odczyt -------------------------------------------------------------
 
     override fun categories(sourceId: Long, kind: ContentKind): Flow<List<Category>> =
         categoryDao.observe(sourceId, kind.name).map { list -> list.map { it.toDomain() } }

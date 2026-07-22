@@ -7,10 +7,12 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.mibox.iptv.presentation.live.LiveTvScreen
 import com.mibox.iptv.presentation.player.PlayerScreen
+import com.mibox.iptv.presentation.sources.SourcesScreen
 
 /** Trasy aplikacji. Prosty graf pod nawigację pilotem (D-Pad). */
 object Routes {
     const val LIVE = "live"
+    const val SOURCES = "sources"
     const val PLAYER = "player/{sourceId}/{categoryId}/{index}"
     fun player(sourceId: Long, categoryId: String, index: Int) =
         "player/$sourceId/$categoryId/$index"
@@ -24,7 +26,16 @@ fun AppNavHost(navController: NavHostController = rememberNavController()) {
             LiveTvScreen(
                 onChannelSelected = { sourceId, categoryId, index ->
                     navController.navigate(Routes.player(sourceId, categoryId, index))
-                }
+                },
+                onManageSources = { navController.navigate(Routes.SOURCES) },
+            )
+        }
+
+        composable(Routes.SOURCES) {
+            SourcesScreen(
+                onSynced = {
+                    navController.popBackStack(Routes.LIVE, inclusive = false)
+                },
             )
         }
 

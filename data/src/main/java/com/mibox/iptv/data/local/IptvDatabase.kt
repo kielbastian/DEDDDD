@@ -19,7 +19,7 @@ import com.mibox.iptv.data.local.entity.SourceEntity
         EpgProgramEntity::class,
     ],
     version = 1,
-    exportSchema = true,
+    exportSchema = false,
 )
 abstract class IptvDatabase : RoomDatabase() {
     abstract fun sourceDao(): SourceDao

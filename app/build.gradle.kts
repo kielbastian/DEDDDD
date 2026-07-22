@@ -33,7 +33,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
+    kotlinOptions {
+        jvmTarget = "17"
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.tv.material3.ExperimentalTvMaterial3Api",
+        )
+    }
     buildFeatures { compose = true }
 }
 
@@ -54,7 +59,6 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(libs.androidx.tv.material)
-    implementation(libs.androidx.tv.foundation)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.paging.compose)
 

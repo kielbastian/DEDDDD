@@ -158,7 +158,13 @@ class AutoFrameRateController(private val activity: Activity) {
     }
 
     private fun selectDisplayMode(frameRate: Float) {
-        val display = activity.display ?: return
+        // Activity.display to API 30+; na 25–29 sięgamy po domyślny Display przez WM.
+        val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            activity.display
+        } else {
+            @Suppress("DEPRECATION")
+            activity.windowManager.defaultDisplay
+        } ?: return
         val supported = display.supportedModes
         // Szukamy trybu, którego odświeżanie jest wielokrotnością klatkażu
         // (24 -> 24/48/72 Hz, 25 -> 50 Hz, 50 -> 50 Hz, 60 -> 60 Hz).

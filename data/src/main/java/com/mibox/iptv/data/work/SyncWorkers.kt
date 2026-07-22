@@ -14,6 +14,7 @@ import com.mibox.iptv.domain.repository.PlaylistRepository
 import com.mibox.iptv.domain.repository.SyncStatus
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.lastOrNull
 import java.util.concurrent.TimeUnit
 
@@ -27,7 +28,9 @@ class EpgSyncWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        val sourceId = playlistRepository.sources().lastOrNull()?.firstOrNull()?.id
+        // sources() to nieskończony Flow z Room — pobieramy pierwszą emisję (first),
+        // nie last (który nigdy by się nie zakończył).
+        val sourceId = playlistRepository.sources().first().firstOrNull()?.id
             ?: return Result.success()
         val status = epgRepository.syncEpg(sourceId).lastOrNull()
         return when (status) {

@@ -13,6 +13,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -37,9 +38,10 @@ class LiveViewModel @Inject constructor(
         .flatMapLatest { id -> getCategories(id, ContentKind.LIVE) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val channels: StateFlow<List<Channel>> = sourceId
-        .flatMapLatest { id -> getChannels(id, selectedCategory.value) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val channels: StateFlow<List<Channel>> =
+        combine(sourceId, selectedCategory) { id, cat -> id to cat }
+            .flatMapLatest { (id, cat) -> getChannels(id, cat) }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun selectCategory(categoryId: String?) {
         selectedCategory.value = categoryId

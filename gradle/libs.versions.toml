@@ -24,6 +24,7 @@ workManager = "2.9.1"
 hiltWork = "1.2.0"
 datastore = "1.1.1"
 coroutines = "1.9.0"
+javaxInject = "1"
 junit = "4.13.2"
 turbine = "1.1.0"
 mockk = "1.13.12"
@@ -78,6 +79,7 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+javax-inject = { module = "javax.inject:javax.inject", version.ref = "javaxInject" }
 
 junit = { module = "junit:junit", version.ref = "junit" }
 turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }

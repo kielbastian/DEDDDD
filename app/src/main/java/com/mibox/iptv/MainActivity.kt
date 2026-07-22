@@ -7,8 +7,14 @@ import android.util.Rational
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
+import androidx.tv.material3.ExperimentalTvMaterial3Api
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
+import androidx.tv.material3.darkColorScheme
 import com.mibox.iptv.presentation.navigation.AppNavHost
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -24,11 +30,16 @@ interface PipController {
 @AndroidEntryPoint
 class MainActivity : ComponentActivity(), PipController {
 
+    @OptIn(ExperimentalTvMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CompositionLocalProvider(LocalPipController provides this) {
-                AppNavHost()
+            MaterialTheme(colorScheme = darkColorScheme()) {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    CompositionLocalProvider(LocalPipController provides this) {
+                        AppNavHost()
+                    }
+                }
             }
         }
     }

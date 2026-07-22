@@ -1,0 +1,54 @@
+name: Build APK
+
+# Buduje instalowalny APK (debug) na runnerze GitHub, który ma dostęp do
+# repozytoriów Google Maven / Android SDK. Artefakt można pobrać z zakładki
+# Actions → dany run → Artifacts → "mibox-iptv-debug-apk".
+
+on:
+  push:
+    branches:
+      - claude/android-tv-iptv-architecture-nbctyg
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle/libs.versions.toml') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Run unit tests (M3U parser)
+        run: ./gradlew :data:testDebugUnitTest --stacktrace
+
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mibox-iptv-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
