@@ -1,0 +1,12 @@
+{
+  "name": "bubleroyal-chat-color",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Userscript zmieniajacy kolor wiadomosci na czacie bubleroyal.com",
+  "scripts": {
+    "test": "node test/marker.test.js && node test/dom.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}
